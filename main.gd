@@ -31,6 +31,7 @@ var _seed := 0
 var _read := {}  # Vector2i -> true: chunks whose water and cliffs were read
 var _wet := {}  # Vector2i -> PackedByteArray: chunks with water or void
 var _cliffs := {}  # Vector2i -> [[Vector2 position, Vector2 high side], ...]
+var _pads := {}  # Vector2i -> [[Vector2 position, Vector2 half size], ...]: buildings levelled under
 var _queue: Array = []  # chunks to read
 var _queued := {}  # the same, to look up
 var _scan := 0.0
@@ -61,6 +62,8 @@ func addon_start(a) -> void:
 		"section": "Terrain", "note": "How far from lakes and the sea the ground slopes down to the water's level."})
 	_values["cliff_height"] = s.add("cliff_height", "number", 2.2, "Cliff height", {"min": 0.0, "max": 8.0, "step": 0.5, "unit": "tiles",
 		"section": "Cliffs", "note": "How much higher the ground is on a cliff's high side. 0: cliffs on the hills as they are."})
+	_values["level_buildings"] = s.add("level_buildings", "bool", true, "Level the ground under buildings", {"section": "Terrain",
+		"note": "Flattens the hills under every building of 2 x 2 tiles or more, blending back into them around it. Belts, rails and pipes follow the ground."})
 	s.changed.connect(_on_setting)
 	api.game_started.connect(_reset)
 	api.game_ended.connect(_reset)
@@ -86,6 +89,7 @@ func _reset() -> void:
 	_read.clear()
 	_wet.clear()
 	_cliffs.clear()
+	_pads.clear()
 	_queue.clear()
 	_queued.clear()
 	_centre = Vector2.INF
@@ -112,6 +116,7 @@ func _process(delta: float) -> void:
 		_read.clear()
 		_wet.clear()
 		_cliffs.clear()
+		_pads.clear()
 		_queue.clear()
 		_queued.clear()
 		_planet = planet
@@ -141,6 +146,13 @@ func _look_for_chunks() -> void:
 		if not _read.has(c) and not _queued.has(c):
 			fresh.append(c)
 			_queued[c] = true
+	# Chunks whose buildings came or changed after they were read: their cliffs again.
+	if api.terrain.has_method("take_changed_chunks"):
+		for c in api.terrain.take_changed_chunks():
+			if _read.has(c) and not _queued.has(c):
+				_read.erase(c)
+				fresh.append(c)
+				_queued[c] = true
 	if not fresh.is_empty():
 		fresh.sort_custom(func(a, b): return _chunk_distance(a, focus) < _chunk_distance(b, focus))
 		_queue.append_array(fresh)
@@ -152,6 +164,7 @@ func _look_for_chunks() -> void:
 			_read.erase(c)
 			_wet.erase(c)
 			_cliffs.erase(c)
+			_pads.erase(c)
 
 
 static func _chunk_distance(c: Vector2i, focus: Vector2) -> float:
@@ -171,15 +184,29 @@ func _read_some() -> void:
 			continue  # not loaded (yet): looked for again by the next scan
 		_read[c] = true
 		if kinds.has(1) or kinds.has(2):
-			_wet[c] = kinds
-			_changed()
+			if not _wet.has(c) or _wet[c] != kinds:
+				_wet[c] = kinds
+				_changed()
 		var found: Array = []
 		for cl in api.terrain.cliffs_in_chunk(c):
 			var up := _high_side(str(cl["orientation"]))
 			if up != Vector2.ZERO:
 				found.append([cl["position"], up])
-		if not found.is_empty():
-			_cliffs[c] = found
+		# Only a change in the cliffs makes new hills (a chunk read again as buildings change).
+		if api.terrain.has_method("buildings_in_chunk"):
+			var pads: Array = api.terrain.buildings_in_chunk(c)
+			if pads != _pads.get(c, []):
+				if pads.is_empty():
+					_pads.erase(c)
+				else:
+					_pads[c] = pads
+				_changed()
+		var before: Array = _cliffs.get(c, [])
+		if found != before:
+			if found.is_empty():
+				_cliffs.erase(c)
+			else:
+				_cliffs[c] = found
 			_changed()
 
 
@@ -225,6 +252,10 @@ func _start_job(focus: Vector2) -> void:
 	for c in _cliffs:
 		if area.has_point(Vector2(c) * 32.0):
 			j.cliffs.append_array(_cliffs[c])
+	if bool(_values.get("level_buildings", true)):
+		for c in _pads:
+			if area.has_point(Vector2(c) * 32.0):
+				j.pads.append_array(_pads[c])
 	_job = j
 	_centre = j.origin + Vector2(span, span) * 0.5
 	_dirty = false

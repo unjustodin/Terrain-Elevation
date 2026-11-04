@@ -33,6 +33,11 @@ const CLIFF_END_RAMP := 16.0  # tiles past a line's end over which its raise ram
 const CLIFF_STEP_FROM := -1.2  # tiles onto the high side where the step starts (under the rock, behind its front)
 const CLIFF_STEP_TO := -0.2  # and where it is at full height: the high ground runs flat right up to the rock
 const CLIFF_BLUR := 6  # texels: how far the plateau beyond the cliffs is smoothed
+## Past a cliff's run (the gap a cliff explosive left, or a chain's end) the step softens into a
+## slope this many tiles wide, over GAP_SOFTEN tiles.
+const GAP_SLOPE := 10.0
+const GAP_SOFTEN := 6.0
+const PAD_MARGIN := 4.0  # tiles round a levelled building over which the ground blends back
 const CHUNK := 32
 
 # In:
@@ -48,6 +53,8 @@ var cliff_height := 2.5
 var wet_chunks := {}
 ## [[Vector2 position, Vector2 high side (unit)], ...]
 var cliffs: Array = []
+## Buildings the ground is levelled under: [[Vector2 position, Vector2 half size], ...]
+var pads: Array = []
 
 # Out:
 var image: Image
@@ -67,10 +74,17 @@ func run() -> void:
 	if shore > 0.0 and not wet_chunks.is_empty():
 		_shores(h, r)
 	_edges(h, r)
+	var full := PackedFloat32Array()
+	full.resize(n)
+	for idx in n:
+		full[idx] = h[idx] + r[idx]
+	if not pads.is_empty():
+		_pads(full)
+		_pads(h)
 	var rg := PackedFloat32Array()
 	rg.resize(n * 2)
 	for idx in n:
-		rg[idx * 2] = h[idx] + r[idx]
+		rg[idx * 2] = full[idx]
 		rg[idx * 2 + 1] = h[idx]
 	image = Image.create_from_data(SIZE, SIZE, false, Image.FORMAT_RGF, rg.to_byte_array())
 	millis = Time.get_ticks_msec() - t0
@@ -144,7 +158,11 @@ func _cliffs(raise: PackedFloat32Array) -> void:
 				var dd := Vector2(maxf(along - 2.0, 0.0), side).length()
 				if dd > CLIFF_NEAR:
 					continue
-				var k := smoothstep(CLIFF_STEP_FROM, CLIFF_STEP_TO, side)
+				# Sharp beside the rock; past its run (a gap where a cliff was blown up, or the end
+				# of a chain) the step opens into a slope, so no bare wall is left standing.
+				var open := clampf((along - 2.0) / GAP_SOFTEN, 0.0, 1.0)
+				var widen := open * GAP_SLOPE * 0.5
+				var k := smoothstep(CLIFF_STEP_FROM - widen, CLIFF_STEP_TO + widen, side)
 				var w := 1.0 / (1.0 + dd * dd * 0.25)
 				var idx := j2 * SIZE + i2
 				wsum[idx] += w
@@ -209,6 +227,46 @@ func _cliffs(raise: PackedFloat32Array) -> void:
 		var v := lerpf(val[idx], soft[idx], t)
 		v *= 1.0 - smoothstep(CLIFF_REACH * 0.6, CLIFF_REACH, tiles)
 		raise[idx] = cliff_height * v
+
+
+## Levels the ground under each building: its footprint at the height under its middle, blended
+## back over PAD_MARGIN tiles round it; where buildings stand side by side their pads blend into
+## one another (weighted by how much each covers a texel), so a row of machines shares a floor.
+func _pads(f: PackedFloat32Array) -> void:
+	var n := SIZE * SIZE
+	var wsum := PackedFloat32Array()
+	wsum.resize(n)
+	var hsum := PackedFloat32Array()
+	hsum.resize(n)
+	var levels := PackedFloat32Array()
+	levels.resize(pads.size())
+	for k in pads.size():
+		var at: Vector2 = pads[k][0]
+		var i := clampi(int(floor((at.x - origin.x) / STEP)), 0, SIZE - 1)
+		var j := clampi(int(floor((at.y - origin.y) / STEP)), 0, SIZE - 1)
+		levels[k] = f[j * SIZE + i]
+	for k in pads.size():
+		var at: Vector2 = pads[k][0]
+		var half: Vector2 = pads[k][1]
+		var reach := half + Vector2(PAD_MARGIN, PAD_MARGIN)
+		var i0 := maxi(int(floor((at.x - reach.x - origin.x) / STEP)), 0)
+		var i1 := mini(int(floor((at.x + reach.x - origin.x) / STEP)), SIZE - 1)
+		var j0 := maxi(int(floor((at.y - reach.y - origin.y) / STEP)), 0)
+		var j1 := mini(int(floor((at.y + reach.y - origin.y) / STEP)), SIZE - 1)
+		for j in range(j0, j1 + 1):
+			for i in range(i0, i1 + 1):
+				var c := _centre(i, j)
+				var out := Vector2(maxf(absf(c.x - at.x) - half.x, 0.0), maxf(absf(c.y - at.y) - half.y, 0.0)).length()
+				var w := 1.0 - smoothstep(0.0, PAD_MARGIN, out)
+				if w <= 0.0:
+					continue
+				var idx := j * SIZE + i
+				wsum[idx] += w
+				hsum[idx] += w * levels[k]
+	for idx in n:
+		var w := wsum[idx]
+		if w > 0.0:
+			f[idx] = lerpf(f[idx], hsum[idx] / w, minf(w, 1.0))
 
 
 ## A separable box blur of `src` over `r` texels each way (running sums, clamped at the edges).
