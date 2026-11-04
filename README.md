@@ -40,12 +40,12 @@ On its page of the Add-ons menu:
 `main.gd` reads, a few chunks a frame, where the client's loaded chunks have water and cliffs
 (`api.terrain.chunk_kinds`, `api.terrain.cliffs_in_chunk`). When that or a setting changes, or
 the camera moves far, `scripts/heights.gd` works out a new height field on a worker thread: a
-grid of 384 x 384 heights, 4 tiles apart, round the camera's focus (1,536 tiles across):
+grid of 768 x 768 heights, 2 tiles apart, round the camera's focus (1,536 tiles across):
 
 - **Hills:** fractal noise over the map, seeded by the save and planet, so a spot always has the
   same height.
-- **Cliffs:** each cliff's high side is raised and fades back over 28 tiles; a ring of cliffs
-  stands up as a plateau.
+- **Cliffs:** terraces: every point takes the side of its nearest cliff and the high side is raised, so a ring of cliffs
+  stands up as a plateau; past the end of a line the step ramps back down.
 - **Water:** everything eases down to 0 near water, so lakes keep their level.
 - **Edges:** the grid fades to flat at its border.
 

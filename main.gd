@@ -240,6 +240,7 @@ func _finish_job() -> void:
 	_task = -1
 	if j.image != null and api.in_game() and bool(_values.get("enabled", true)) and not api.world.on_platform():
 		api.terrain.set_heights(j.image, j.origin, Heights.STEP)
+		api.note("hills drawn round %s: %d cliffs, %d chunks with water, %d ms" % [str(_centre), j.cliffs.size(), j.wet_chunks.size(), j.millis])
 
 
 func _wait_job() -> void:
