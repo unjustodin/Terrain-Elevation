@@ -13,8 +13,9 @@ extends RefCounted
 ##           it is on, weighted by how near), so a chain of cliff pieces turning corners makes one
 ##           smooth edge; further out that is carried on from the nearest ground near a cliff and
 ##           smoothed, so a ring of cliffs stands up as a plateau and the high side of a line
-##           stays high. The rock itself sits on the low ground: the step rises behind it, from
-##           CLIFF_STEP_FROM to CLIFF_STEP_TO tiles onto the high side, to about the rock's top.
+##           stays high. The rock itself sits on the low ground: the step rises under it, from
+##           CLIFF_STEP_FROM to CLIFF_STEP_TO tiles onto the high side, so the high ground stays
+##           level right up into the rock and the rock's face is the drop.
 ##           Past the end of a line the raise ramps back down (Factorio's gaps in a chain).
 ##   water   everything eased down to 0 within `shore` tiles of water (or a platform's void), so
 ##           lakes and the sea stay at their level with the ground sloping down to them
@@ -29,8 +30,8 @@ const EDGE := 48  # texels faded to flat at the grid's border
 const CLIFF_REACH := 96.0  # tiles from a cliff its terrace reaches before fading back
 const CLIFF_NEAR := 24.0  # tiles round a cliff in which the cliffs are blended
 const CLIFF_END_RAMP := 16.0  # tiles past a line's end over which its raise ramps back down
-const CLIFF_STEP_FROM := 0.5  # tiles onto the high side where the step starts (inside the rock)
-const CLIFF_STEP_TO := 1.9  # and where it reaches full height (the rock's back edge)
+const CLIFF_STEP_FROM := -1.2  # tiles onto the high side where the step starts (under the rock, behind its front)
+const CLIFF_STEP_TO := -0.2  # and where it is at full height: the high ground runs flat right up to the rock
 const CLIFF_BLUR := 6  # texels: how far the plateau beyond the cliffs is smoothed
 const CHUNK := 32
 
@@ -204,7 +205,7 @@ func _cliffs(raise: PackedFloat32Array) -> void:
 		if tiles > CLIFF_REACH:
 			continue
 		# Sharp near the cliffs, the smoothed plateau further out.
-		var t := smoothstep(CLIFF_NEAR * 0.5, CLIFF_NEAR, tiles)
+		var t := smoothstep(CLIFF_NEAR, CLIFF_NEAR * 2.0, tiles)
 		var v := lerpf(val[idx], soft[idx], t)
 		v *= 1.0 - smoothstep(CLIFF_REACH * 0.6, CLIFF_REACH, tiles)
 		raise[idx] = cliff_height * v

@@ -46,8 +46,8 @@ grid of 768 x 768 heights, 2 tiles apart, round the camera's focus (1,536 tiles 
   same height.
 - **Cliffs:** terraces. Near the cliffs the ground blends every cliff round it (which side it is on), so a chain
   of pieces makes one smooth edge; further out the high side stays high, so a ring of cliffs stands up as a
-  plateau, and past the end of a line the step ramps back down. The rock sits on the low ground and the
-  terrace rises behind it to about its top (Cliff height, 2.2 tiles by default).
+  plateau, and past the end of a line the step ramps back down. The rock sits on the low ground and the high
+  ground stays level right up into it, so the rock's face is the drop (Cliff height, 2.2 tiles by default).
 - **Water:** everything eases down to 0 near water, so lakes keep their level.
 - **Edges:** the grid fades to flat at its border.
 
