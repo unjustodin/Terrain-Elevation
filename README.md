@@ -33,7 +33,7 @@ On its page of the Add-ons menu:
 | Hill size | 160 tiles | How wide a hill is; wider is gentler |
 | Small bumps | 0.35 | Little rises and dips on top |
 | Flat ground by water | 24 tiles | How far from water the ground slopes down to the water's level |
-| Cliff height | 2.5 tiles | How much higher a cliff's high side is (0: cliffs just sit on the hills) |
+| Cliff height | 2.2 tiles | How much higher a cliff's high side is (0: cliffs just sit on the hills) |
 
 ## How it works
 
@@ -44,8 +44,10 @@ grid of 768 x 768 heights, 2 tiles apart, round the camera's focus (1,536 tiles 
 
 - **Hills:** fractal noise over the map, seeded by the save and planet, so a spot always has the
   same height.
-- **Cliffs:** terraces: every point takes the side of its nearest cliff and the high side is raised, so a ring of cliffs
-  stands up as a plateau; past the end of a line the step ramps back down.
+- **Cliffs:** terraces. Near the cliffs the ground blends every cliff round it (which side it is on), so a chain
+  of pieces makes one smooth edge; further out the high side stays high, so a ring of cliffs stands up as a
+  plateau, and past the end of a line the step ramps back down. The rock sits on the low ground and the
+  terrace rises behind it to about its top (Cliff height, 2.2 tiles by default).
 - **Water:** everything eases down to 0 near water, so lakes keep their level.
 - **Edges:** the grid fades to flat at its border.
 

@@ -59,7 +59,7 @@ func addon_start(a) -> void:
 		"section": "Terrain", "note": "Little rises and dips on top of the hills."})
 	_values["shore"] = s.add("shore", "number", 24.0, "Flat ground by water", {"min": 0.0, "max": 96.0, "step": 4.0, "unit": "tiles",
 		"section": "Terrain", "note": "How far from lakes and the sea the ground slopes down to the water's level."})
-	_values["cliff_height"] = s.add("cliff_height", "number", 2.5, "Cliff height", {"min": 0.0, "max": 8.0, "step": 0.5, "unit": "tiles",
+	_values["cliff_height"] = s.add("cliff_height", "number", 2.2, "Cliff height", {"min": 0.0, "max": 8.0, "step": 0.5, "unit": "tiles",
 		"section": "Cliffs", "note": "How much higher the ground is on a cliff's high side. 0: cliffs on the hills as they are."})
 	s.changed.connect(_on_setting)
 	api.game_started.connect(_reset)
@@ -217,7 +217,7 @@ func _start_job(focus: Vector2) -> void:
 	j.hill_size = float(_values.get("hill_size", 160.0))
 	j.detail = float(_values.get("detail", 0.35))
 	j.shore = float(_values.get("shore", 24.0))
-	j.cliff_height = float(_values.get("cliff_height", 2.5))
+	j.cliff_height = float(_values.get("cliff_height", 2.2))
 	var area := Rect2(j.origin - Vector2(64.0, 64.0), Vector2(span + 128.0, span + 128.0))
 	for c in _wet:
 		if area.has_point(Vector2(c) * 32.0):
