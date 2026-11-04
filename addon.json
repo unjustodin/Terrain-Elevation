@@ -1,0 +1,9 @@
+{
+	"id": "terrain-elevation",
+	"name": "Terrain Elevation",
+	"version": "0.1.0",
+	"api": 1.2,
+	"entry": "main.gd",
+	"author": "UnjustOdin",
+	"description": "Hills under the factory, sloping down to the water, with Factorio's cliffs as steps, for Zenith. Drawn only: the game stays flat."
+}
